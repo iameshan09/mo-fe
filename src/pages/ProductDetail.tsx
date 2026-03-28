@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProduct, deleteProduct, deleteVariant } from '@/api/products';
 import type { Product, Variant } from '@/types';
@@ -40,13 +40,6 @@ export default function ProductDetail() {
     fetchProduct();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const attributeKeys = useMemo(() => {
-    if (!product) return [];
-    const keys = new Set<string>();
-    product.variants.forEach((v) => Object.keys(v.attributes).forEach((k) => keys.add(k)));
-    return Array.from(keys);
-  }, [product]);
 
   const handleDelete = async () => {
     if (!product || !confirm('Delete this product and all its variants?')) return;
@@ -113,7 +106,6 @@ export default function ProductDetail() {
           {product.variants.length > 0 ? (
             <VariantSelector
               variants={product.variants}
-              attributeKeys={attributeKeys}
               selected={selectedVariant}
               onSelect={setSelectedVariant}
             />

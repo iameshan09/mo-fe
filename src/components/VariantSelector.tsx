@@ -1,52 +1,121 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Variant } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface Props {
   variants: Variant[];
-  attributeKeys: string[];
   selected: Variant | null;
   onSelect: (variant: Variant) => void;
 }
 
-export default function VariantSelector({ variants, attributeKeys, selected, onSelect }: Props) {
-  // Group unique values per attribute key
-  const attributeValues: Record<string, string[]> = {};
-  for (const key of attributeKeys) {
-    const values = new Set<string>();
-    variants.forEach((v) => {
-      const val = v.attributes[key];
-      if (val) values.add(val);
-    });
-    attributeValues[key] = Array.from(values);
-  }
+export default function VariantSelector({ variants, selected, onSelect }: Props) {
+  // Deduplicated attribute keys across all variants
+  const attributeKeys = useMemo(() => {
+    const keys = new Set<string>();
+    variants.forEach((v) => Object.keys(v.attributes).forEach((k) => keys.add(k)));
+    return Array.from(keys);
+  }, [variants]);
 
-  // Current selected attributes
-  const selectedAttrs = selected?.attributes ?? {};
-
-  const handleSelectAttribute = (key: string, value: string) => {
-    // Find a variant matching the new selection + keep other selected attributes
-    const targetAttrs = { ...selectedAttrs, [key]: value };
-    const match = variants.find((v) =>
-      Object.entries(targetAttrs).every(([k, val]) => v.attributes[k] === val),
-    );
-    if (match) {
-      onSelect(match);
-    } else {
-      // Fall back to first variant with this attribute value
-      const fallback = variants.find((v) => v.attributes[key] === value);
-      if (fallback) onSelect(fallback);
+  // Deduplicated values per attribute key
+  const attributeValues = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    for (const key of attributeKeys) {
+      const values = new Set<string>();
+      variants.forEach((v) => {
+        const val = v.attributes[key];
+        if (val) values.add(val);
+      });
+      result[key] = Array.from(values);
     }
-  };
+    return result;
+  }, [variants, attributeKeys]);
 
-  const isVariantAvailable = (key: string, value: string): boolean => {
-    const testAttrs = { ...selectedAttrs, [key]: value };
-    return variants.some(
-      (v) =>
-        Object.entries(testAttrs).every(([k, val]) => v.attributes[k] === val) &&
-        v.stock > 0 &&
-        v.isActive,
-    );
+  // Internal selected attributes state
+  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>(() =>
+    selected?.attributes ?? {},
+  );
+
+  // Sync internal state when parent's selected variant changes externally
+  useEffect(() => {
+    if (selected) {
+      setSelectedAttrs(selected.attributes);
+    }
+  }, [selected]);
+
+  // Check if a value for a given key is available, considering all OTHER selected attributes
+  const isValueAvailable = useCallback(
+    (key: string, value: string, currentSelection: Record<string, string>): boolean => {
+      return variants.some((v) => {
+        if (v.attributes[key] !== value) return false;
+        if (v.stock <= 0 || !v.isActive) return false;
+        // Check against all other selected attributes (not the one being tested)
+        return Object.entries(currentSelection).every(
+          ([k, val]) => k === key || v.attributes[k] === val,
+        );
+      });
+    },
+    [variants],
+  );
+
+  // Find a matching in-stock variant for a given set of attributes
+  const findMatchingVariant = useCallback(
+    (attrs: Record<string, string>): Variant | null => {
+      return (
+        variants.find(
+          (v) =>
+            Object.entries(attrs).every(([k, val]) => v.attributes[k] === val) &&
+            v.stock > 0 &&
+            v.isActive,
+        ) ?? null
+      );
+    },
+    [variants],
+  );
+
+  // Cascade-validate: auto-deselect attributes that became unavailable after a change
+  const validateAndResolve = useCallback(
+    (nextAttrs: Record<string, string>) => {
+      const validated = { ...nextAttrs };
+
+      // Iteratively remove attributes whose selected value is no longer available
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const key of attributeKeys) {
+          if (validated[key] && !isValueAvailable(key, validated[key], validated)) {
+            delete validated[key];
+            changed = true;
+          }
+        }
+      }
+
+      setSelectedAttrs(validated);
+
+      // Try to find an exact matching variant with all validated attributes
+      const match = findMatchingVariant(validated);
+      if (match) {
+        onSelect(match);
+        return;
+      }
+
+      // If partial selection, find the best available variant that matches selected attrs
+      const fallback = variants.find(
+        (v) =>
+          Object.entries(validated).every(([k, val]) => v.attributes[k] === val) &&
+          v.stock > 0 &&
+          v.isActive,
+      );
+      if (fallback) {
+        onSelect(fallback);
+      }
+    },
+    [attributeKeys, isValueAvailable, findMatchingVariant, variants, onSelect],
+  );
+
+  const handleSelect = (key: string, value: string) => {
+    const nextAttrs = { ...selectedAttrs, [key]: value };
+    validateAndResolve(nextAttrs);
   };
 
   return (
@@ -57,14 +126,14 @@ export default function VariantSelector({ variants, attributeKeys, selected, onS
           <div className="flex flex-wrap gap-2">
             {attributeValues[key].map((value) => {
               const isSelected = selectedAttrs[key] === value;
-              const available = isVariantAvailable(key, value);
+              const available = isValueAvailable(key, value, selectedAttrs);
 
               return (
                 <button
                   key={value}
                   type="button"
                   disabled={!available}
-                  onClick={() => handleSelectAttribute(key, value)}
+                  onClick={() => handleSelect(key, value)}
                   className={cn(
                     'inline-flex items-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
                     isSelected
