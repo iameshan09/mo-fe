@@ -1,73 +1,94 @@
-# React + TypeScript + Vite
+# MO Marketplace - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A product management and e-commerce interface built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite 8
+- **Routing**: React Router DOM 7
+- **UI**: shadcn/ui + Tailwind CSS 4 + Lucide icons
+- **Forms**: React Hook Form + Zod validation
+- **HTTP Client**: Axios
+- **Theme**: Dark mode support via next-themes
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Browse and search products
+- View product details with smart variant selection
+- Create products with multiple variants (authenticated)
+- Variant management with attribute-based selection and stock checking
+- Quick buy functionality with quantity selection
+- JWT authentication (login/register)
+- Responsive design with dark mode
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm (or pnpm/yarn)
+- Backend API running (see [mo-be](../mo-be/))
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. (Optional) Set the API URL if the backend is not on the default:
+   ```bash
+   export VITE_API_URL=http://localhost:3000/api/v1
+   ```
+
+3. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+The app will be available at `http://localhost:5173`.
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VITE_API_URL` | Backend API base URL | `http://localhost:3000/api/v1` |
+
+## Pages
+
+| Path | Auth | Description |
+|------|------|-------------|
+| `/` | No | Product listing with search |
+| `/products/:id` | No | Product detail with variant selector |
+| `/products/new` | Yes | Create a new product |
+| `/login` | No | User login |
+| `/register` | No | User registration |
+
+## Scripts
+
+```bash
+npm run dev         # Start dev server with HMR
+npm run build       # Type check + production build
+npm run lint        # Run ESLint
+npm run preview     # Preview production build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── api/            # Axios client and API endpoint functions
+├── components/     # React components
+│   ├── ui/        # shadcn UI primitives (Button, Card, Dialog, etc.)
+│   ├── Layout.tsx
+│   ├── QuickBuy.tsx
+│   ├── VariantSelector.tsx
+│   └── AddVariantDialog.tsx
+├── pages/          # Page components (ProductList, ProductDetail, etc.)
+├── store/          # Auth context and state management
+├── types/          # TypeScript type definitions
+├── lib/            # Utility functions
+├── App.tsx         # Root component with routing
+└── main.tsx        # Entry point
 ```
