@@ -24,6 +24,9 @@ export default function Layout() {
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <Link to="/" className="text-xl font-bold tracking-tight">
             MO Marketplace
+            <span className="ml-1.5 align-super text-[10px] font-medium text-muted-foreground">
+              v{__APP_VERSION__}
+            </span>
           </Link>
 
           <nav className="flex items-center gap-3">
